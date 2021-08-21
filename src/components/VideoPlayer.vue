@@ -1,14 +1,28 @@
 <template>
   <div class="container">
-    <div class="no-data">
+    <div v-if="!currentVideoPath" class="no-data">
       <div class="content">无视频</div>
     </div>
 
-    <video></video>
+    <video ref="video"></video>
   </div>
 </template>
 
-<script lang="ts" setup></script>
+<script lang="ts" setup>
+import { ref, computed, watch } from "vue";
+import { useStore } from "@/store/index";
+
+const store = useStore();
+const currentVideoPath = computed(() => store.currentVideoPath);
+
+const video = ref<HTMLVideoElement | null>(null);
+watch(currentVideoPath, () => {
+  const videoEl = video.value!
+
+  videoEl.src = currentVideoPath.value
+  videoEl.play()
+})
+</script>
 
 <style scoped>
 .container {
