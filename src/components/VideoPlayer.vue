@@ -4,23 +4,62 @@
       <div class="content">无视频</div>
     </div>
 
-    <video ref="video"></video>
+    <video ref="video" @timeupdate="handleTimeUpdate" @durationchange="handleDurationChange"></video>
   </div>
 </template>
 
 <script lang="ts" setup>
 import { ref, computed, watch } from "vue";
-import { useStore } from "@/store/index";
+import { PlayState, useStore } from "@/store/index";
 
 const store = useStore();
 const currentVideoPath = computed(() => store.currentVideoPath);
 
 const video = ref<HTMLVideoElement | null>(null);
+
 watch(currentVideoPath, () => {
   const videoEl = video.value!
+  if (currentVideoPath.value) {
+    videoEl.src = currentVideoPath.value
+    videoEl.play()
+    store.playState = PlayState.PLAY
+  }
+})
 
-  videoEl.src = currentVideoPath.value
-  videoEl.play()
+const handleTimeUpdate = (ev: Event) => store.currentTime = (ev.target as HTMLMediaElement).currentTime
+const handleDurationChange = (ev: Event) => store.totalTime = (ev.target as HTMLMediaElement).duration
+
+const playState = computed(() => store.playState)
+watch(playState, () => {
+  const videoEl = video.value!
+  switch (playState.value) {
+    case PlayState.PLAY:
+      if (currentVideoPath.value) videoEl.play()
+      break
+    case PlayState.PAUSE:
+      if (currentVideoPath.value) videoEl.pause()
+      break
+    case PlayState.STOP:
+      store.currentVideoPath = ""
+      store.currentTime = 0
+      store.totalTime = 0
+      videoEl.pause()
+      break
+    default:
+      break
+  }
+})
+
+const currentTime = store.currentTime
+const totalTime = store.totalTime
+// 当前视频播放结束后自动播放下一条
+watch([currentTime, totalTime], () => {
+  // 无法做到完全相等，取一个区间即可
+  if (Math.abs(totalTime - currentTime) <= 0.1) {
+    const currentIndex = store.videoList.indexOf(store.currentVideoPath)
+
+    if (currentIndex !== store.videoList.length - 1) store.currentVideoPath = store.videoList[currentIndex + 1]
+  }
 })
 </script>
 
